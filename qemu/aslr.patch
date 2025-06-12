@@ -1,0 +1,32 @@
+--- mmap.c      2024-12-11 21:39:08.441436629 -0500
++++ mmap_new.c  2024-12-11 22:56:15.116179058 -0500
+@@ -26,6 +26,7 @@
+ #include "user-mmap.h"
+ #include "target_mman.h"
+ #include "qemu/interval-tree.h"
++#include <sys/random.h>
+
+ #ifdef TARGET_ARM
+ #include "target/arm/cpu-features.h"
+@@ -918,8 +919,20 @@
+             }
+             flags = (flags & ~MAP_FIXED_NOREPLACE) | MAP_FIXED;
+         } else if (!(flags & MAP_FIXED)) {
+-            abi_ulong real_start = start & -host_page_size;
+-            off_t host_offset = offset & -host_page_size;
++            //abi_ulong real_start = start & -host_page_size;
++            abi_ulong real_start;
++           ssize_t written = getrandom(&real_start, sizeof(abi_long), 0);
++           if (written != sizeof(abi_long)) {
++                   perror("getrandom in mmap");
++                   exit(0);
++           }
++           if (sizeof(abi_long) == 4) {
++                   real_start &= 0x00fff000;
++           }
++           else if (sizeof(abi_long) == 8) {
++                   real_start &= 0x0000fffffffff000;
++           }
++           off_t host_offset = offset & -host_page_size;
+             size_t real_len = len + offset - host_offset;
+             abi_ulong align = MAX(host_page_size, TARGET_PAGE_SIZE);

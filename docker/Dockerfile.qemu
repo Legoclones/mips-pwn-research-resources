@@ -1,0 +1,63 @@
+FROM ubuntu:24.04
+
+ARG build=mipsel32r6-uClibc
+ARG qemu_ver=qemu-mipsel
+
+# install dependencies
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y wget patchelf
+RUN rm -rf /var/lib/apt/lists/*
+
+# copy files
+RUN echo "Connection blocked" > /etc/banner_fail
+COPY ./docker/target/${build} /target
+COPY ./qemu/${qemu_ver} /target/qemu
+COPY ./docker/start.sh /start.sh
+RUN chmod +x /start.sh
+RUN rm /target/THIS_IS_NOT_YOUR_ROOT_FILESYSTEM
+RUN mkdir /target/ctf
+
+# add statically-compiled socat
+RUN wget https://github.com/ernw/static-toolbox/releases/download/socat-v1.7.4.4/socat-1.7.4.4-x86_64 -O /target/socat
+RUN chmod +x /target/socat
+
+
+### set up x86_64 programs that need to be able to run in chroot environment
+### such as like /bin/sh, /usr/bin/cat, and /usr/bin/ls
+
+# set up libraries at hard-coded path (so library names don't conflict)
+RUN mkdir /target/x86
+RUN cp -L /lib/x86_64-linux-gnu/libc.so.6 /target/x86/libc.so.6
+RUN cp -L /lib64/ld-linux-x86-64.so.2 /target/x86/ld-linux-x86-64.so.2
+RUN cp -L /lib/x86_64-linux-gnu/libselinux.so.1 /target/x86/libselinux.so.1
+RUN cp -L /lib/x86_64-linux-gnu/libpcre2-8.so.0 /target/x86/libpcre2-8.so.0
+
+# copy executables
+RUN rm /target/bin/sh /target/bin/cat /target/bin/ls
+RUN cp $(which sh) /target/bin/sh
+RUN cp $(which cat) /target/bin/cat
+RUN cp $(which ls) /target/bin/ls
+
+# patch executables
+RUN patchelf --set-interpreter /x86/ld-linux-x86-64.so.2 /target/bin/sh
+RUN patchelf --set-interpreter /x86/ld-linux-x86-64.so.2 /target/bin/cat
+RUN patchelf --set-interpreter /x86/ld-linux-x86-64.so.2 /target/bin/ls
+
+RUN patchelf --force-rpath --set-rpath /x86 /target/bin/sh
+RUN patchelf --force-rpath --set-rpath /x86 /target/bin/cat
+RUN patchelf --force-rpath --set-rpath /x86 /target/bin/ls
+
+# create unpriv ctf user
+RUN echo 'ctf:x:1000:1000:,,,:/home/ctf:/bin/sh' >> /target/etc/passwd
+RUN echo 'ctf:x:1000:' >> /target/etc/group
+RUN echo 'ctf:!:::::::' >> /target/etc/shadow
+
+# change permissions
+RUN chown -R root:1000 /target/ctf
+RUN chmod -R 750 /target/ctf
+
+# if there are any other commands that need to be ran, use the shell spawned by /bin/sh to run "/qemu /full/path/to/command"
+
+# run
+CMD ["bash"]
