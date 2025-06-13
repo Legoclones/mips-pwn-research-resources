@@ -4,6 +4,7 @@ During my time researching MIPS binary exploitation, I created some resources th
 * [60 Docker containers for cross-compiling C/C++ code](#cross-compilation-containers)
 * [Static, patched, userspace versions of QEMU 9.2 that supports ASLR](#userspace-qemu-binaries)
 * [60 Docker containers for emulating MIPS binaries](#emulation-containers)
+* [MIPS system QEMU 9.2 binaries for kernel emulation](#system-qemu-binaries)
 
 ## Cross-Compilation Containers
 > *[See these containers on Docker Hub](https://hub.docker.com/repository/docker/legoclones/mips-compile/general)*
@@ -33,7 +34,8 @@ QEMU is a popular emulation framework that [supports various user-mod MIPS versi
 The binaries were compiled (and can be replicated by you) inside of an `ubuntu:24.04` Docker container using the following commands:
 ```bash
 # install dependencies
-apt install gcc make file wget cpio unzip python3 python3-venv python3-pip git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build
+apt update
+apt install -y gcc make file wget cpio unzip python3 python3-venv python3-pip git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build
 pip3 install --break-system-packages sphinx sphinx_rtd_theme
 
 # get code
@@ -60,6 +62,8 @@ Note that there are 6 (statically-compiled) executables resulting from this, sup
 * [`qemu-mips64el`](./qemu/qemu-mips64el) (64-bit, little endian, N64 ABI)
 * [`qemu-mipsn32`](./qemu/qemu-mipsn32) (32-bit, big endian, N32 ABI)
 * [`qemu-mipsn32el`](./qemu/qemu-mipsn32el) (32-bit, little endian, N32 ABI)
+
+*(Note - also for funzies I included a version of `qemu-mipsel` with no ASLR in the same directory)*
 
 ## Emulation Containers
 > *[See these containers on Docker Hub](https://hub.docker.com/repository/docker/legoclones/mips-pwn/general)*
@@ -111,8 +115,71 @@ docker build -f docker/Dockerfile.qemu . -t legoclones/mips-pwn:<build_id> --bui
 ```
 
 ## System QEMU Binaries
-Coming soon...
+In order to emulate MIPS CPUs for my own Linux kernels, I also compiled QEMU system binaries using version 9.2.
 
+The binaries were compiled (and can be replicated by you) inside of an `ubuntu:24.04` Docker container using the following commands:
 ```bash
+# install dependencies
+apt update
+apt install -y gcc make file wget cpio unzip python3 python3-venv python3-pip git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build
+pip3 install --break-system-packages sphinx sphinx_rtd_theme
+
+# get code
+cd /tmp
+git clone https://github.com/qemu/qemu
+cd qemu
+git checkout stable-9.2
+
+# build
+mkdir build
+cd build
 ../configure --target-list=mips-softmmu,mips64-softmmu,mips64el-softmmu,mipsel-softmmu
+make
 ```
+
+There are 4 (dynamically-linked) binaries resulting from this:
+* [`qemu-system-mips`](./qemu/qemu-system-mips) (32-bit, big endian)
+* [`qemu-system-mipsel`](./qemu/qemu-system-mipsel) (32-bit, little endian)
+* [`qemu-system-mips64`](./qemu/qemu-system-mips64) (64-bit, big endian)
+* [`qemu-system-mips64el`](./qemu/qemu-system-mips64el) (64-bit, little endian)
+
+*(Note - for some reason, my machine would occasionally complain that files like `efi-pcnet.rom` weren't available, so I copied those into a [`roms/`](./qemu/roms/) folder. If you run into the same issue, just have that file in the current directory and you should be good to go)*
+
+## Linux Kernel
+I wanted my own Linux kernel in MIPS that wasn't decades old to use in some research, so I compiled my own mipsel32r2 Linux version 6.15.2 kernel that can be successfully emulated by QEMU system binaries and a rootfs from Buildroot.
+
+### Building the Linux Kernel
+> [`vmlinux`](./kernel/vmlinux) and [`vmlinuz`](./kernel/vmlinuz)
+
+I copied the latest kernel version (6.15.2 at the time) to my machine and use a pre-defined kernel config for the Malta board (`malta_defconfig`):
+```bash
+# set options to cross-compile
+export ARCH=mips
+export CROSS_COMPILE=mipsel-linux-
+
+# set up
+cd /tmp
+apt update
+apt install -y wget git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison u-boot-tools
+tar -xf linux-6.15.2.tar.xz
+
+# compile
+cd linux-6.15.2
+make malta_defconfig
+make -j$(nproc)
+```
+
+Linux has SEVERAL configurations for MIPS kernels right out of the gate (see `make help`), but the Malta board seems to have the best support in QEMU so I chose that profile. Note that you can further customize options if you wish by running `make menuconfig`.
+
+### Creating the rootfs
+> [`rootfs.cpio`](./kernel/rootfs.cpio)
+
+In addition to the QEMU emulator and kernel, a root filesystem is needed so there's something to run once the kernel is up. The containers above were built using [Buildroot](https://buildroot.org/download.html), so I made sure to also create a `cpio` image when [compiling](https://buildroot.org/downloads/manual/manual.html#_buildroot_quick_start) for `mipsel32r2-glibc` (and found it in `output/images/`).
+
+### Kernel Emulation
+Once you have the [QEMU system binary](./qemu/), the [kernel `vmlinux`](./kernel/vmlinux) (or [`vmlinuz`](./kernel/vmlinuz)), and the [rootfs](./kernel/rootfs.cpio), you can emulate the system with the following command:
+```bash
+./qemu/qemu-system-mipsel -M malta -kernel ./kernel/vmlinux -nographic -m 256M -append "console=ttyS0" -initrd ./kernel/rootfs.cpio
+```
+
+<img src="./image.png">
