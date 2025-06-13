@@ -5,6 +5,7 @@ During my time researching MIPS binary exploitation, I created some resources th
 * [Static, patched, userspace versions of QEMU 9.2 that supports ASLR](#userspace-qemu-binaries)
 * [60 Docker containers for emulating MIPS binaries](#emulation-containers)
 * [MIPS system QEMU 9.2 binaries for kernel emulation](#system-qemu-binaries)
+* [QEMU-compatible mipsel32r2 Linux kernel version 6.15.2](#linux-kernel)
 
 ## Cross-Compilation Containers
 > *[See these containers on Docker Hub](https://hub.docker.com/repository/docker/legoclones/mips-compile/general)*
