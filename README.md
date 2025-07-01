@@ -296,6 +296,7 @@ Once you have the [QEMU system binary](./qemu/), the [kernel `vmlinux`](./kernel
     * [MIPS o64 ABI for GCC](https://gcc.gnu.org/projects/mipso64-abi.html)
     * [MIPS eabi Documentation](https://sourceware.org/legacy-ml/binutils/2003-06/msg00436.html)
 * **nanoMIPS Documentation**
+    * [dyncall MIPS Calling Conventions](https://www.dyncall.org/docs/manual/manualse11.html#x12-78000D.7)
     * [MIPS Architecture Base: nanoMIPS32 Instruction Set Technical Reference Manual](https://s3-eu-west-1.amazonaws.com/downloads-mips/I7200/I7200+product+launch/MIPS_nanomips32_ISA_TRM_01_01_MD01247.pdf)
     * [MIPS Architecture Base: 32-bit Privileged Resource Architecture Technical Reference Manual](https://s3-eu-west-1.amazonaws.com/downloads-mips/I7200/I7200+product+launch/MIPS_nanoMIPS32_PRA_06_09_MD01251.pdf)
     * [MIPS Architecture Extension: nanoMIPS32 DSP Technical Reference Manual](https://wavecomp.ai/downloads-mips/I7200/I7200-product-launch/MIPS_nanoMIPS32_DSP_00_04_MD01249.pdf)
