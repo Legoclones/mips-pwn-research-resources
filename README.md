@@ -153,7 +153,7 @@ I wanted my own Linux kernel in MIPS that wasn't decades old to use in some rese
 ### Building the Linux Kernel
 > [`vmlinux`](./kernel/vmlinux) and [`vmlinuz`](./kernel/vmlinuz)
 
-I copied the latest kernel version (6.15.2 at the time) to my machine and use a pre-defined kernel config for the Malta board (`malta_defconfig`):
+I copied the latest kernel version (6.15.2 at the time) to my machine and use a pre-defined kernel config for the Malta board (`malta_defconfig`) inside of my `legoclones/mips-compile:latest` Docker container:
 ```bash
 # set options to cross-compile
 export ARCH=mips
