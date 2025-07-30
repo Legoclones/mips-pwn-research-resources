@@ -178,6 +178,13 @@ Linux has SEVERAL configurations for MIPS kernels right out of the gate (see `ma
 
 In addition to the QEMU emulator and kernel, a root filesystem is needed so there's something to run once the kernel is up. The containers above were built using [Buildroot](https://buildroot.org/download.html), so I made sure to also create a `cpio` image when [compiling](https://buildroot.org/downloads/manual/manual.html#_buildroot_quick_start) for `mipsel32r2-glibc` (and found it in `output/images/`).
 
+The toolchain was built with Buildroot in an `ubuntu:24.04` Docker container with the following commands (after downloading/decompressing [the package](https://buildroot.org/download.html)):
+```bash
+apt install -y gcc make sudo file g++ wget cpio unzip rsync bc bzip2 patch perl libncurses-dev
+make menuconfig # this is where you set options for the toolchain
+make
+```
+
 ### Kernel Emulation
 Once you have the [QEMU system binary](./qemu/), the [kernel `vmlinux`](./kernel/vmlinux) (or [`vmlinuz`](./kernel/vmlinuz)), and the [rootfs](./kernel/rootfs.cpio), you can emulate the system with the following command:
 ```bash
